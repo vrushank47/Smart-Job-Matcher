@@ -4,11 +4,13 @@ Pipeline
 --------
 raw text
   → lowercase
+  → protect symbol-bearing tech terms (c++, c#, .net)
   → remove URLs, emails, punctuation, lone digits
   → NLTK word tokenize
   → POS-tag each token               (so verbs/nouns lemmatize correctly)
   → lemmatize with WordNetLemmatizer
   → drop stop-words
+  → restore protected tech terms
   → join back to a clean string
 
 The output is a plain string ready to be fed into scikit-learn's
@@ -41,6 +43,38 @@ _EMAIL_RE = re.compile(r"\S+@\S+")
 _DIGIT_RE = re.compile(r"\b\d+\b")           # lone numbers (years, counts…)
 _WHITESPACE_RE = re.compile(r"\s+")
 
+# Symbol-bearing tech terms that plain punctuation-stripping would destroy
+# (e.g. "C++" -> "c", "C#" -> "c", ".NET" -> "net"). Protect them with a
+# placeholder before stripping, then restore after tokenizing/lemmatizing.
+_PROTECT_PLUSPLUS_RE = re.compile(r"\b([a-z])\+\+")
+_PROTECT_SHARP_RE = re.compile(r"\b([a-z])#")
+_PROTECT_DOTNET_RE = re.compile(r"\.net\b")
+
+_RESTORE_PLUSPLUS_RE = re.compile(r"\b([a-z])plusplus\b")
+_RESTORE_SHARP_RE = re.compile(r"\b([a-z])sharp\b")
+_RESTORE_DOTNET_RE = re.compile(r"\bdotnet\b")
+
+
+def _protect_special_tokens(text: str) -> str:
+    """Replace symbol-bearing tech terms with alpha-only placeholders.
+
+    Must run after lowercasing and before punctuation stripping, so
+    terms like 'c++', 'c#', and '.net' survive the cleaning pipeline
+    instead of being reduced to a bare letter.
+    """
+    text = _PROTECT_PLUSPLUS_RE.sub(lambda m: f"{m.group(1)}plusplus", text)
+    text = _PROTECT_SHARP_RE.sub(lambda m: f"{m.group(1)}sharp", text)
+    text = _PROTECT_DOTNET_RE.sub("dotnet", text)
+    return text
+
+
+def _restore_special_tokens(word: str) -> str:
+    """Reverse _protect_special_tokens on a single lemmatized token."""
+    word = _RESTORE_PLUSPLUS_RE.sub(lambda m: f"{m.group(1)}++", word)
+    word = _RESTORE_SHARP_RE.sub(lambda m: f"{m.group(1)}#", word)
+    word = _RESTORE_DOTNET_RE.sub(".net", word)
+    return word
+
 
 def _penn_to_wordnet(penn_tag: str) -> str:
     """Map a Penn Treebank POS tag to a WordNet POS constant.
@@ -72,6 +106,7 @@ def clean_text(text: str) -> str:
     text = text.lower()
     text = _URL_RE.sub(" ", text)
     text = _EMAIL_RE.sub(" ", text)
+    text = _protect_special_tokens(text)
     text = _DIGIT_RE.sub(" ", text)
     # Remove punctuation (keep internal hyphens so "scikit-learn" survives)
     text = text.translate(str.maketrans(string.punctuation.replace("-", ""), " " * (len(string.punctuation) - 1)))
@@ -99,7 +134,7 @@ def get_tokens(text: str) -> list[str]:
             continue
         wn_pos = _penn_to_wordnet(tag)
         lemma = _lemmatizer.lemmatize(word, pos=wn_pos)
-        tokens.append(lemma)
+        tokens.append(_restore_special_tokens(lemma))
 
     return tokens
 
