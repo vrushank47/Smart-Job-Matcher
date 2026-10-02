@@ -1,40 +1,32 @@
-
-````markdown
 # Smart Job Matcher
 
 > **Know where your resume stands before you apply.**
 
-Applying to jobs usually means doing the same thing over and over again — reading a job description, comparing it with your resume, and trying to figure out whether you're actually a good fit.
+Applying to jobs usually means the same repetitive comparison: read a job description, read your resume, and try to guess whether you're actually a good fit.
 
-I built **Smart Job Matcher** to make that comparison quick and understandable.
-
-Paste your resume, paste a job description, and the application breaks down the match into a score, relevant skills, missing skills, and the reasoning behind the score.
+I built **Smart Job Matcher** to make that comparison fast and legible. Paste your resume, paste a job description, and the app breaks the match down into a score, the skills you share, the skills you're missing, and the reasoning behind all of it.
 
 ---
 
 ## What it does
 
-The matcher looks at a resume and a job description from two different angles:
+The matcher looks at a resume and a job description from two angles:
 
-### 1. Text Similarity
+### 1. Text similarity
 
-It uses **TF-IDF + Cosine Similarity** to measure how closely the two pieces of text overlap.
+**TF-IDF + cosine similarity** measures how closely the two texts overlap at the word level.
 
-### 2. Skill Matching
+### 2. Skill matching
 
-It checks the technical skills mentioned in the job description against the skills detected in the resume.
+The technical skills mentioned in the job description are checked against the skills detected in the resume.
 
-These are combined into a final match score.
-
-Instead of just saying:
+The two signals are combined into a single weighted match score. Instead of just saying:
 
 ```text
 You are a 54% match
-````
+```
 
-the application also tells you **why**.
-
-For example:
+the app tells you *why*:
 
 ```text
 Match Score        54%
@@ -53,22 +45,20 @@ Missing Skills
 ✗ Kubernetes
 ```
 
-That makes the score much easier to interpret.
+That breakdown is what makes the score worth trusting instead of just taking at face value.
 
 ---
 
 ## Why I built it
 
-Most resume screening tools give you a number without much context.
+Most resume screening tools hand you a number with no context. I wanted something that could actually answer:
 
-I wanted to build something where I could actually see:
+- What skills does this job require?
+- Which of them do I already have?
+- What am I missing?
+- How much does the resume text itself overlap with the job description?
 
-* What skills does this job require?
-* Which of them do I already have?
-* What am I missing?
-* How much does the actual resume text overlap with the job description?
-
-The project also gave me a practical way to understand how basic NLP techniques can be used in a real application instead of just implementing them as isolated ML exercises.
+It also gave me a concrete way to apply basic NLP techniques in a real application, rather than as isolated exercises in a notebook.
 
 ---
 
@@ -96,40 +86,36 @@ The project also gave me a practical way to understand how basic NLP techniques 
            Recommendation
 ```
 
-The backend exposes this through a FastAPI API, while the React frontend handles the interaction and presents the results.
+The backend exposes this pipeline through a FastAPI API; the React frontend handles the interaction and renders the results.
 
 ---
 
-## Tech Stack
+## Tech stack
 
 ### Frontend
-
-* React
-* Vite
-* JavaScript
-* CSS
+- React
+- Vite
+- JavaScript
+- CSS
 
 ### Backend
+- Python
+- FastAPI
 
-* Python
-* FastAPI
-
-### NLP / Machine Learning
-
-* Scikit-learn
-* NLTK
-* TF-IDF
-* Cosine Similarity
+### NLP / machine learning
+- Scikit-learn
+- NLTK
+- TF-IDF
+- Cosine similarity
 
 ### Other
-
-* Git
-* GitHub
-* REST API
+- Git
+- GitHub
+- REST API
 
 ---
 
-## Project Structure
+## Project structure
 
 ```text
 Smart_resume_matcher/
@@ -137,11 +123,18 @@ Smart_resume_matcher/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   └── routes.py
 │   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   └── schemas.py
 │   │   ├── services/
+│   │   │   ├── __init__.py
 │   │   │   ├── matcher.py
+│   │   │   ├── nlp_utils.py
 │   │   │   ├── skill_analyzer.py
-│   │   │   └── text_processor.py
+│   │   │   └── skill_extractor.py
+│   │   ├── __init__.py
 │   │   └── main.py
 │   └── requirements.txt
 │
@@ -150,7 +143,11 @@ Smart_resume_matcher/
 │   │   ├── components/
 │   │   ├── pages/
 │   │   ├── services/
-│   │   └── ...
+│   │   │   └── api.js
+│   │   ├── App.jsx
+│   │   ├── App.css
+│   │   ├── main.jsx
+│   │   └── index.css
 │   └── package.json
 │
 ├── data/
@@ -183,7 +180,7 @@ The API will be available at:
 http://127.0.0.1:8000
 ```
 
-FastAPI documentation:
+FastAPI's interactive docs:
 
 ```text
 http://127.0.0.1:8000/docs
@@ -191,7 +188,7 @@ http://127.0.0.1:8000/docs
 
 ### Frontend
 
-Open another terminal:
+In a separate terminal:
 
 ```bash
 cd frontend
@@ -200,17 +197,15 @@ npm install
 npm run dev
 ```
 
-Then open the local URL shown by Vite.
+Then open the local URL Vite prints to the terminal.
 
 ---
 
 ## A small technical detail
 
-The project currently uses **TF-IDF**, which is based on lexical similarity.
+The project currently relies on **TF-IDF**, which measures lexical overlap — matching words, not meaning.
 
-That means it works well when the resume and job description use similar terminology, but it doesn't fully understand that different phrases can have the same meaning.
-
-For example:
+It works well when the resume and job description use similar terminology, but it won't recognize that two differently worded phrases mean the same thing. For example:
 
 ```text
 "building backend APIs"
@@ -222,31 +217,26 @@ and
 "developing server-side REST services"
 ```
 
-may be related to a human, but TF-IDF won't necessarily recognize them as strongly related.
-
-That's one of the limitations of the current implementation — and also one of the areas I'd like to improve.
+read as closely related to a person, but TF-IDF has no guarantee of scoring them that way. That's a real limitation of the current implementation, and one of the things I'd like to improve next.
 
 ---
 
 ## What's next
 
-Some things I'd like to explore:
+- Resume PDF upload and extraction
+- Semantic similarity using sentence embeddings
+- Better skill and entity extraction
+- Experience-level matching
+- More detailed resume improvement suggestions
+- Job recommendations based on a candidate's profile
 
-* Resume PDF upload and extraction
-* Semantic similarity using sentence embeddings
-* Better skill/entity extraction
-* Experience-level matching
-* More detailed resume improvement suggestions
-* Job recommendations based on the candidate's profile
-
-The current version intentionally keeps the matching pipeline simple enough to understand and explain.
+The current version keeps the matching pipeline simple on purpose — simple enough to fully understand and explain.
 
 ---
 
 ## Built by
 
 **Vrushank Saravade**
-
 Information Technology Engineering Student
 
 [GitHub](https://github.com/vrushank47) · [LinkedIn](https://www.linkedin.com/in/vrushank-saravade/) · [X](https://x.com/Vrushank736)
@@ -254,8 +244,3 @@ Information Technology Engineering Student
 ---
 
 ⭐ If you find the project interesting, feel free to explore the code or try the matching pipeline yourself.
-
-```
-
-**One thing:** change the project structure name from `Smart_resume_matcher/` to `smart-job-matcher/` **only if you actually rename the GitHub repository/project folder**. Otherwise leave it as your real folder name.
-```
